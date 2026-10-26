@@ -52,4 +52,5 @@ public class Mission {
 
     public Long getId() { return id; }
     public Long getScenarioId() { return scenario.getId(); }
+    public String getTargetData() { return targetData; }
 }
