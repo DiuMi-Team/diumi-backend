@@ -1,1 +1,9 @@
-spring.application.name=diumi-backend
+spring:
+  application:
+    name: diumi-backend
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+server:
+  servlet:
+    context-path: /api/v1
