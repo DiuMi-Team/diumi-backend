@@ -67,4 +67,6 @@ public class UserAction {
 
     public Long getId() { return id; }
     public Boolean getValid() { return valid; }
+    public ActionType getActionType() { return actionType; }
+    public LocalDateTime getOccurredAt() { return occurredAt; }
 }
