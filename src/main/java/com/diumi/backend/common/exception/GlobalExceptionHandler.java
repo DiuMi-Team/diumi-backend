@@ -6,6 +6,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -17,7 +18,8 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(code.name(), code.message()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception exception) {
         ErrorCode code = ErrorCode.INVALID_REQUEST;
         return ResponseEntity.status(code.status())
