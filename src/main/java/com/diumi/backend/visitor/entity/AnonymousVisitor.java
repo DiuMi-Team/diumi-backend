@@ -35,4 +35,16 @@ public class AnonymousVisitor {
     public UUID getId() {
         return id;
     }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public void recordAccess(LocalDateTime accessedAt) {
+        this.lastAccessedAt = accessedAt;
+    }
 }
