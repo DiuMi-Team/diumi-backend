@@ -7,6 +7,7 @@ import com.diumi.backend.common.exception.BusinessException;
 import com.diumi.backend.common.exception.ErrorCode;
 import com.diumi.backend.result.dto.EndSessionRequest;
 import com.diumi.backend.result.dto.EndSessionResponse;
+import com.diumi.backend.result.dto.SessionResultResponse;
 import com.diumi.backend.result.entity.ExperienceResult;
 import com.diumi.backend.result.repository.ExperienceResultRepository;
 import com.diumi.backend.scenario.repository.ScenarioStepRepository;
@@ -14,11 +15,13 @@ import com.diumi.backend.session.entity.ExperienceSession;
 import com.diumi.backend.session.entity.SessionStatus;
 import com.diumi.backend.session.entity.SessionType;
 import com.diumi.backend.session.repository.ExperienceSessionRepository;
+import com.diumi.backend.stepresult.entity.StepResult;
 import com.diumi.backend.stepresult.repository.StepResultRepository;
 import com.diumi.backend.visitor.entity.AnonymousVisitor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,10 +70,39 @@ public class ExperienceResultService {
                 endedAt.atZone(TimeConfig.KST).toOffsetDateTime(), resultAvailable);
     }
 
-    private void validateSession(ExperienceSession session, AnonymousVisitor visitor) {
+    @Transactional(readOnly = true)
+    public SessionResultResponse getResult(UUID sessionId, AnonymousVisitor visitor) {
+        ExperienceSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+        validateOwner(session, visitor);
+        ExperienceResult result = resultRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESULT_NOT_FOUND));
+
+        List<SessionResultResponse.WrongStep> wrongSteps = session.getType() == SessionType.REAL_FREE
+                ? List.of()
+                : stepResultRepository.findWrongStepResults(sessionId).stream()
+                        .map(this::toWrongStep)
+                        .toList();
+        String missionTitle = session.getMission() == null ? null : session.getMission().getTitle();
+
+        return new SessionResultResponse(session.getId(), session.getType(), session.getScenarioTitle(),
+                missionTitle, result.getSuccess(), result.getElapsedSeconds(), result.getAiHelpCount(),
+                result.getErrorCount(), result.getBackCount(), wrongSteps);
+    }
+
+    private SessionResultResponse.WrongStep toWrongStep(StepResult stepResult) {
+        return new SessionResultResponse.WrongStep(stepResult.getStep().getId(),
+                stepResult.getStep().getStepName(), stepResult.getErrorCount());
+    }
+
+    private void validateOwner(ExperienceSession session, AnonymousVisitor visitor) {
         if (!session.getVisitorId().equals(visitor.getId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN_SESSION);
         }
+    }
+
+    private void validateSession(ExperienceSession session, AnonymousVisitor visitor) {
+        validateOwner(session, visitor);
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
             throw new BusinessException(ErrorCode.SESSION_ALREADY_ENDED);
         }

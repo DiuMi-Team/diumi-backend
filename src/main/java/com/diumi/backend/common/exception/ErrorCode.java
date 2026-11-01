@@ -12,6 +12,7 @@ public enum ErrorCode {
     MISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "미션을 찾을 수 없어요."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "세션을 찾을 수 없어요."),
     STEP_NOT_FOUND(HttpStatus.NOT_FOUND, "단계를 찾을 수 없어요."),
+    RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "아직 결과가 없어요."),
     SESSION_ALREADY_ENDED(HttpStatus.CONFLICT, "이미 종료된 세션입니다."),
     STEP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 완료한 단계입니다."),
     SESSION_NOT_READY_TO_COMPLETE(HttpStatus.CONFLICT, "아직 완료하지 않은 단계가 있어요."),
