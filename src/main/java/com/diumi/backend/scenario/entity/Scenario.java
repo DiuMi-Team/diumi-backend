@@ -46,7 +46,23 @@ public class Scenario {
         return id;
     }
 
+    public String getType() {
+        return type;
+    }
+
     public String getTitle() {
         return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }
