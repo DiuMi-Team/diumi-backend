@@ -65,6 +65,11 @@ public class ExperienceSession {
         this.startedAt = startedAt;
     }
 
+    public void end(SessionStatus status, LocalDateTime endedAt) {
+        this.status = status;
+        this.endedAt = endedAt;
+    }
+
     public UUID getId() { return id; }
     public Long getScenarioId() { return scenario.getId(); }
     public String getScenarioTitle() { return scenario.getTitle(); }

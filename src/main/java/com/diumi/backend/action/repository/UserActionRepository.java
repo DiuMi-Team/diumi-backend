@@ -27,4 +27,26 @@ public interface UserActionRepository extends JpaRepository<UserAction, Long> {
             """)
     long countActionsByType(@Param("sessionId") UUID sessionId, @Param("stepId") Long stepId,
                             @Param("actionType") ActionType actionType);
+
+    @Query("""
+            select count(action) from UserAction action
+            where action.session.id = :sessionId
+              and action.valid = false
+            """)
+    long countInvalidActionsInSession(@Param("sessionId") UUID sessionId);
+
+    @Query("""
+            select count(action) from UserAction action
+            where action.session.id = :sessionId
+              and action.actionType = :actionType
+            """)
+    long countActionsInSessionByType(@Param("sessionId") UUID sessionId,
+                                     @Param("actionType") ActionType actionType);
+
+    @Query("""
+            select count(distinct action.step.id) from UserAction action
+            where action.session.id = :sessionId
+              and action.valid = true
+            """)
+    long countStepsWithValidAction(@Param("sessionId") UUID sessionId);
 }

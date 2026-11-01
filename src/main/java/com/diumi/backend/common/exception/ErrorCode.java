@@ -14,6 +14,7 @@ public enum ErrorCode {
     STEP_NOT_FOUND(HttpStatus.NOT_FOUND, "단계를 찾을 수 없어요."),
     SESSION_ALREADY_ENDED(HttpStatus.CONFLICT, "이미 종료된 세션입니다."),
     STEP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 완료한 단계입니다."),
+    SESSION_NOT_READY_TO_COMPLETE(HttpStatus.CONFLICT, "아직 완료하지 않은 단계가 있어요."),
     AI_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "음성 도우미 연결에 실패했습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
