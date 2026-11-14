@@ -8,6 +8,9 @@ import com.diumi.backend.ai.client.OpenAiRealtimeClient.ClientSecret;
 import com.diumi.backend.ai.client.OpenAiRealtimeClientException;
 import com.diumi.backend.ai.dto.StartAiConnectionRequest;
 import com.diumi.backend.ai.dto.StartAiConnectionResponse;
+import com.diumi.backend.ai.guide.entity.AiGuideRule;
+import com.diumi.backend.ai.guide.repository.AiGuideRuleRepository;
+import com.diumi.backend.ai.prompt.AiMissionContextFactory;
 import com.diumi.backend.ai.prompt.AiPromptFactory;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
@@ -25,6 +28,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,24 +38,30 @@ public class AiConnectionService {
     private final ExperienceSessionRepository sessionRepository;
     private final ScenarioStepRepository stepRepository;
     private final MissionStepGuideRepository missionStepGuideRepository;
+    private final AiGuideRuleRepository aiGuideRuleRepository;
     private final UserActionRepository actionRepository;
     private final OpenAiRealtimeClient realtimeClient;
     private final AiPromptFactory promptFactory;
+    private final AiMissionContextFactory missionContextFactory;
     private final Clock clock;
 
     public AiConnectionService(ExperienceSessionRepository sessionRepository,
                                ScenarioStepRepository stepRepository,
                                MissionStepGuideRepository missionStepGuideRepository,
+                               AiGuideRuleRepository aiGuideRuleRepository,
                                UserActionRepository actionRepository,
                                OpenAiRealtimeClient realtimeClient,
                                AiPromptFactory promptFactory,
+                               AiMissionContextFactory missionContextFactory,
                                Clock clock) {
         this.sessionRepository = sessionRepository;
         this.stepRepository = stepRepository;
         this.missionStepGuideRepository = missionStepGuideRepository;
+        this.aiGuideRuleRepository = aiGuideRuleRepository;
         this.actionRepository = actionRepository;
         this.realtimeClient = realtimeClient;
         this.promptFactory = promptFactory;
+        this.missionContextFactory = missionContextFactory;
         this.clock = clock;
     }
 
@@ -71,8 +81,12 @@ public class AiConnectionService {
         ClientSecret secret;
         try {
             MissionStepGuide missionGuide = findMissionGuide(session, step);
+            List<AiGuideRule> guideRules = aiGuideRuleRepository
+                    .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                            session.getScenarioType(), List.of("COMMON", step.getStepCode()));
             secret = realtimeClient.createClientSecret(visitor.getId().toString(),
-                    promptFactory.create(session, step, missionGuide));
+                    promptFactory.create(session, step, missionGuide,
+                            missionContextFactory.create(session, step), guideRules));
         } catch (OpenAiRealtimeClientException exception) {
             throw new BusinessException(ErrorCode.AI_CONNECTION_FAILED);
         }

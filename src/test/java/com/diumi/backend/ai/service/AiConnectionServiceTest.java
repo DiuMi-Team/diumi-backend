@@ -15,7 +15,11 @@ import com.diumi.backend.ai.client.OpenAiRealtimeClient.ClientSecret;
 import com.diumi.backend.ai.client.OpenAiRealtimeClientException;
 import com.diumi.backend.ai.dto.StartAiConnectionRequest;
 import com.diumi.backend.ai.dto.StartAiConnectionResponse;
+import com.diumi.backend.ai.guide.entity.AiGuideRule;
+import com.diumi.backend.ai.guide.repository.AiGuideRuleRepository;
+import com.diumi.backend.ai.prompt.AiMissionContextFactory;
 import com.diumi.backend.ai.prompt.AiPromptFactory;
+import tools.jackson.databind.ObjectMapper;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
 import com.diumi.backend.common.exception.ErrorCode;
@@ -35,6 +39,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +55,7 @@ class AiConnectionServiceTest {
     @Mock ExperienceSessionRepository sessionRepository;
     @Mock ScenarioStepRepository stepRepository;
     @Mock MissionStepGuideRepository missionStepGuideRepository;
+    @Mock AiGuideRuleRepository aiGuideRuleRepository;
     @Mock UserActionRepository actionRepository;
     @Mock OpenAiRealtimeClient realtimeClient;
 
@@ -63,10 +69,12 @@ class AiConnectionServiceTest {
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-10-26T05:40:00Z"), TimeConfig.KST);
         service = new AiConnectionService(sessionRepository, stepRepository, missionStepGuideRepository,
-                actionRepository, realtimeClient, new AiPromptFactory(), clock);
+                aiGuideRuleRepository, actionRepository, realtimeClient, new AiPromptFactory(),
+                new AiMissionContextFactory(new ObjectMapper()), clock);
         visitor = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
         scenario = new Scenario(1L, "CAFE", "카페 주문", "주문", "image.png", true);
-        mission = new Mission(scenario, "아메리카노", "주문", "EASY", "{}", true);
+        mission = new Mission(scenario, "아메리카노 주문", "아이스 아메리카노 한 잔 주문",
+                "EASY", "{\"PAY\":{\"target_code\":\"PAY_CARD\"}}", true);
         setId(mission, 101L);
         step = new ScenarioStep(scenario, "PAY", 4, "결제하기", null);
         setId(step, 14L);
@@ -79,6 +87,12 @@ class AiConnectionServiceTest {
         when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any())).thenReturn(
                 Optional.of(new MissionStepGuide(mission, step,
                         "카드를 카드 투입구에 넣어 주세요.", "CARD_READER")));
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "CAFE", List.of("COMMON", "PAY")))
+                .thenReturn(List.of(new AiGuideRule("CAFE", "PAY", "SELECT_CARD",
+                        "카드, 카드로", "카드로 할래요", "카드 결제 버튼을 직접 눌러 주세요.",
+                        10, true)));
         when(realtimeClient.createClientSecret(any(), any())).thenReturn(
                 new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
 
@@ -94,6 +108,10 @@ class AiConnectionServiceTest {
         verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
         assertThat(promptCaptor.getValue())
                 .contains("카드를 카드 투입구에 넣어 주세요.", "CARD_READER")
+                .contains("미션 제목: 아메리카노 주문")
+                .contains("현재 단계 목표(JSON): {\"target_code\":\"PAY_CARD\"}")
+                .contains("카드 결제 버튼을 직접 눌러 주세요.")
+                .contains("버튼을 대신 누를 수 없습니다")
                 .doesNotContain("null");
 
         ArgumentCaptor<UserAction> actionCaptor = ArgumentCaptor.forClass(UserAction.class);
