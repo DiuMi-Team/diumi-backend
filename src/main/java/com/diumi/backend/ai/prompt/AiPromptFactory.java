@@ -12,7 +12,8 @@ public class AiPromptFactory {
     private static final String DEFAULT_GUIDE = "현재 단계의 이름을 기준으로만 안내하세요.";
     private static final String NO_TARGET = "제공되지 않음";
 
-    public String create(ExperienceSession session, ScenarioStep step, MissionStepGuide missionGuide,
+    public String create(ExperienceSession session, ScenarioStep step, String screenCode,
+                         MissionStepGuide missionGuide,
                          String missionContext, List<AiGuideRule> guideRules) {
         String guideMessage = firstNotBlank(
                 missionGuide == null ? null : missionGuide.getGuideMessage(),
@@ -65,7 +66,7 @@ public class AiPromptFactory {
                 """.formatted(
                 session.getScenarioTitle(),
                 session.getType(),
-                step.getStepCode(),
+                screenCode,
                 step.getStepName(),
                 guideMessage,
                 targetCode,

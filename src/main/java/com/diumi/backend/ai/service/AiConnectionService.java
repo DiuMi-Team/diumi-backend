@@ -81,11 +81,13 @@ public class AiConnectionService {
         ClientSecret secret;
         try {
             MissionStepGuide missionGuide = findMissionGuide(session, step);
+            String screenCode = resolveScreenCode(request, step);
             List<AiGuideRule> guideRules = aiGuideRuleRepository
                     .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
-                            session.getScenarioType(), List.of("COMMON", step.getStepCode()));
+                            session.getScenarioType(), List.of("COMMON", screenCode));
+            validateRequestedScreenCode(request, screenCode, guideRules);
             secret = realtimeClient.createClientSecret(visitor.getId().toString(),
-                    promptFactory.create(session, step, missionGuide,
+                    promptFactory.create(session, step, screenCode, missionGuide,
                             missionContextFactory.create(session, step), guideRules));
         } catch (OpenAiRealtimeClientException exception) {
             throw new BusinessException(ErrorCode.AI_CONNECTION_FAILED);
@@ -117,5 +119,21 @@ public class AiConnectionService {
         }
         return missionStepGuideRepository.findByMissionIdAndStepId(
                 session.getMissionId(), step.getId()).orElse(null);
+    }
+
+    private String resolveScreenCode(StartAiConnectionRequest request, ScenarioStep step) {
+        return request.screenCode() == null ? step.getStepCode() : request.screenCode();
+    }
+
+    private void validateRequestedScreenCode(StartAiConnectionRequest request, String screenCode,
+                                             List<AiGuideRule> guideRules) {
+        if (request.screenCode() == null) {
+            return;
+        }
+        boolean registered = guideRules.stream()
+                .anyMatch(rule -> screenCode.equals(rule.getScreenCode()));
+        if (!registered) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
     }
 }

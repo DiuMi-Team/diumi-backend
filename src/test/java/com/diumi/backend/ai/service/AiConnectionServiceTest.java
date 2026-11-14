@@ -97,7 +97,7 @@ class AiConnectionServiceTest {
                 new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
 
         StartAiConnectionResponse response = service.start(SESSION_ID, visitor,
-                new StartAiConnectionRequest(14L));
+                new StartAiConnectionRequest(14L, null));
 
         assertThat(response.clientSecret()).isEqualTo("ek_test");
         assertThat(response.model()).isEqualTo("gpt-realtime");
@@ -122,11 +122,57 @@ class AiConnectionServiceTest {
     }
 
     @Test
+    void usesRequestedScreenRulesWithoutChangingTheProgressStep() {
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
+        when(stepRepository.findById(14L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "CAFE", List.of("COMMON", "SELECT_PAYMENT")))
+                .thenReturn(List.of(new AiGuideRule("CAFE", "SELECT_PAYMENT", "SELECT_CARD",
+                        "카드", "카드로 할래요", "카드 결제 버튼을 직접 눌러 주세요.",
+                        10, true)));
+        when(realtimeClient.createClientSecret(any(), any())).thenReturn(
+                new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
+
+        service.start(SESSION_ID, visitor,
+                new StartAiConnectionRequest(14L, "SELECT_PAYMENT"));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("현재 화면 코드: SELECT_PAYMENT")
+                .contains("현재 단계: 결제하기")
+                .contains("카드 결제 버튼을 직접 눌러 주세요.");
+    }
+
+    @Test
+    void rejectsUnregisteredExplicitScreenCode() {
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
+        when(stepRepository.findById(14L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "CAFE", List.of("COMMON", "UNKNOWN_SCREEN")))
+                .thenReturn(List.of(new AiGuideRule("CAFE", "COMMON", "ASK_CURRENT_TASK",
+                        "뭐 해야", "지금 뭘 해야 해요?", "현재 단계 안내를 확인해 주세요.",
+                        10, true)));
+
+        assertError(ErrorCode.INVALID_REQUEST,
+                () -> service.start(SESSION_ID, visitor,
+                        new StartAiConnectionRequest(14L, "UNKNOWN_SCREEN")));
+        verify(realtimeClient, never()).createClientSecret(any(), any());
+        verify(actionRepository, never()).save(any());
+    }
+
+    @Test
     void practiceMissionCannotUseAiHelp() {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.PRACTICE_MISSION)));
 
         assertError(ErrorCode.AI_NOT_ALLOWED,
-                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L)));
+                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L, null)));
         verify(realtimeClient, never()).createClientSecret(any(), any());
     }
 
@@ -137,7 +183,7 @@ class AiConnectionServiceTest {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
 
         assertError(ErrorCode.SESSION_ALREADY_ENDED,
-                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L)));
+                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L, null)));
     }
 
     @Test
@@ -148,7 +194,7 @@ class AiConnectionServiceTest {
                 .thenThrow(new OpenAiRealtimeClientException("failed"));
 
         assertError(ErrorCode.AI_CONNECTION_FAILED,
-                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L)));
+                () -> service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L, null)));
         verify(actionRepository, never()).save(any());
     }
 
