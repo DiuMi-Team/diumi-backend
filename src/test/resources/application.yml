@@ -9,3 +9,10 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+
+openai:
+  api-key: test-key
+  base-url: https://api.openai.com
+  realtime:
+    model: gpt-realtime
+    client-secret-ttl-seconds: 600
