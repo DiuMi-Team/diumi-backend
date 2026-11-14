@@ -69,8 +69,10 @@ public class ExperienceSession {
     public Long getScenarioId() { return scenario.getId(); }
     public String getScenarioTitle() { return scenario.getTitle(); }
     public Mission getMission() { return mission; }
+    public Long getMissionId() { return mission == null ? null : mission.getId(); }
     public UUID getVisitorId() { return visitor.getId(); }
     public SessionType getType() { return type; }
     public SessionStatus getStatus() { return status; }
     public LocalDateTime getStartedAt() { return startedAt; }
+    public LocalDateTime getEndedAt() { return endedAt; }
 }
