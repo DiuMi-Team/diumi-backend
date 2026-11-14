@@ -168,6 +168,47 @@ class AiConnectionServiceTest {
     }
 
     @Test
+    void usesFastFoodRulesForFastFoodScreenContext() throws Exception {
+        scenario = new Scenario(2L, "FAST_FOOD", "패스트푸드 주문", "햄버거 주문",
+                "fast-food.png", true);
+        mission = new Mission(scenario, "불고기버거 세트 주문",
+                "불고기버거 세트와 콜라를 주문하세요.", "EASY",
+                "{\"SELECT_MENU\":{\"target_code\":\"MENU_BULGOGI_BURGER\"}}", true);
+        setId(mission, 201L);
+        step = new ScenarioStep(scenario, "SELECT_MENU", 1, "메뉴 고르기", null);
+        setId(step, 21L);
+
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
+        when(stepRepository.findById(21L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "FAST_FOOD", List.of("COMMON", "SELECT_MEAL_TYPE")))
+                .thenReturn(List.of(
+                        new AiGuideRule("FAST_FOOD", "COMMON", "REQUEST_AUTOMATION",
+                                "대신, 눌러 줘", "대신 주문해 주세요",
+                                "제가 대신 누르거나 주문할 수는 없습니다.", 10, true),
+                        new AiGuideRule("FAST_FOOD", "SELECT_MEAL_TYPE", "SELECT_SET",
+                                "세트", "세트로 할래요",
+                                "세트 메뉴 버튼을 직접 눌러 주세요.", 20, true)));
+        when(realtimeClient.createClientSecret(any(), any())).thenReturn(
+                new ClientSecret("ek_fast_food", 1792990800L, "sess_fast_food", "gpt-realtime"));
+
+        service.start(SESSION_ID, visitor,
+                new StartAiConnectionRequest(21L, "SELECT_MEAL_TYPE"));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("시나리오: 패스트푸드 주문")
+                .contains("현재 화면 코드: SELECT_MEAL_TYPE")
+                .contains("세트 메뉴 버튼을 직접 눌러 주세요.")
+                .contains("제가 대신 누르거나 주문할 수는 없습니다.")
+                .doesNotContain("카드 결제 버튼을 직접 눌러 주세요.");
+    }
+
+    @Test
     void practiceMissionCannotUseAiHelp() {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.PRACTICE_MISSION)));
 
