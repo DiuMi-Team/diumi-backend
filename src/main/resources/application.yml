@@ -7,3 +7,10 @@ spring:
 server:
   servlet:
     context-path: /api/v1
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+  realtime:
+    model: ${OPENAI_REALTIME_MODEL:gpt-realtime}
+    client-secret-ttl-seconds: ${OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS:600}
