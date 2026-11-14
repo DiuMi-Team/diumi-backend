@@ -27,7 +27,7 @@ class AiPromptFactoryTest {
         AiGuideRule rule = new AiGuideRule("CAFE", "SELECT_MENU", "FIND_MENU",
                 "아메리카노, 어디, 못 찾겠어", "아메리카노가 어디 있어요?",
                 "메뉴 목록에서 아메리카노 버튼을 직접 눌러 주세요.", 10, true);
-        String prompt = factory.create(fixture.session(), fixture.step(), missionGuide,
+        String prompt = factory.create(fixture.session(), fixture.step(), "SELECT_MENU", missionGuide,
                 "- 미션 제목: 아메리카노 주문", List.of(rule));
 
         assertThat(prompt)
@@ -49,7 +49,7 @@ class AiPromptFactoryTest {
     void fallsBackToScenarioStepGuideForFreeSession() {
         Fixture fixture = fixture(SessionType.REAL_FREE, "원하는 메뉴를 선택해 주세요.");
 
-        String prompt = factory.create(fixture.session(), fixture.step(), null,
+        String prompt = factory.create(fixture.session(), fixture.step(), "SELECT_MENU", null,
                 "자유 체험이므로 정해진 미션 조건이 없습니다.", List.of());
 
         assertThat(prompt)
@@ -64,7 +64,7 @@ class AiPromptFactoryTest {
     void usesSafeDefaultWhenNoGuideExists() {
         Fixture fixture = fixture(SessionType.REAL_FREE, null);
 
-        String prompt = factory.create(fixture.session(), fixture.step(), null,
+        String prompt = factory.create(fixture.session(), fixture.step(), "SELECT_MENU", null,
                 "자유 체험이므로 정해진 미션 조건이 없습니다.", List.of());
 
         assertThat(prompt)

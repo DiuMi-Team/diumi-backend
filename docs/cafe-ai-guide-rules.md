@@ -9,6 +9,19 @@ API 8을 호출할 때마다 백엔드는 다음 정보를 새 Realtime 세션�
 - 현재 단계 이름과 안내 문구
 - `COMMON` 규칙과 현재 `step_code`에 해당하는 카페 안내 규칙
 
+`ScenarioStep`은 결과 계산을 위한 큰 단계를 유지한다. 장바구니, 적립, 카드 투입처럼
+한 단계 안에 여러 화면이 있으면 API 8의 선택적 `screen_code`로 현재 세부 화면을 전달한다.
+
+```json
+{
+  "step_id": 9001,
+  "screen_code": "CART"
+}
+```
+
+`screen_code`를 생략하면 기존과 동일하게 해당 단계의 `step_code`를 사용한다. 등록되지 않은
+`screen_code`는 `400 INVALID_REQUEST`로 처리한다.
+
 ## 카페 단계 코드
 
 카페 시나리오의 `ScenarioStep.step_code`는 아래 코드와 맞춰야 해당 화면 규칙이 적용된다.
