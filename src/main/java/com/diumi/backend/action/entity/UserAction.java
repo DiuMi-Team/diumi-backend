@@ -69,4 +69,5 @@ public class UserAction {
     public Boolean getValid() { return valid; }
     public ActionType getActionType() { return actionType; }
     public LocalDateTime getOccurredAt() { return occurredAt; }
+    public ScenarioStep getStep() { return step; }
 }
