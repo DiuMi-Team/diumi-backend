@@ -49,4 +49,8 @@ public class Scenario {
     public String getTitle() {
         return title;
     }
+
+    public String getType() {
+        return type;
+    }
 }
