@@ -18,6 +18,7 @@ public record OpenAiProperties(
 ) {
     public record Realtime(
             @NotBlank String model,
+            @NotBlank String transcriptionModel,
             @Min(10) @Max(7200) long clientSecretTtlSeconds
     ) {
     }
