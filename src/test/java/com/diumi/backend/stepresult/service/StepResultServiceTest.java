@@ -84,7 +84,7 @@ class StepResultServiceTest {
     void completesPracticeStepAndReturnsNextGuide() {
         ExperienceSession session = session(SessionType.PRACTICE_MISSION);
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
-        when(stepRepository.findFirstByScenarioIdAndStepOrderGreaterThanOrderByStepOrderAsc(1L, 1))
+        when(stepRepository.findFirstByScenario_IdAndStepOrderGreaterThanOrderByStepOrderAsc(1L, 1))
                 .thenReturn(Optional.of(secondStep));
         when(guideRepository.findByMissionIdAndStepId(101L, 12L)).thenReturn(Optional.of(
                 new MissionStepGuide(mission, secondStep, "차가운 것을 골라 보세요.", "OPT_ICE")));
@@ -106,7 +106,7 @@ class StepResultServiceTest {
     @Test
     void realMissionLastStepReturnsNullNextStep() {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
-        when(stepRepository.findFirstByScenarioIdAndStepOrderGreaterThanOrderByStepOrderAsc(1L, 1))
+        when(stepRepository.findFirstByScenario_IdAndStepOrderGreaterThanOrderByStepOrderAsc(1L, 1))
                 .thenReturn(Optional.empty());
 
         CompleteStepResponse response = service.complete(SESSION_ID, 11L, visitor,
@@ -121,7 +121,7 @@ class StepResultServiceTest {
         ScenarioStep thirdStep = step(13L, "PAY", 3, "결제하기", null);
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_FREE)));
         when(resultRepository.findCompletedStepIds(SESSION_ID)).thenReturn(List.of(11L));
-        when(stepRepository.findAllByScenarioIdOrderByStepOrderAsc(1L))
+        when(stepRepository.findAllByScenario_IdOrderByStepOrderAsc(1L))
                 .thenReturn(List.of(firstStep, secondStep, thirdStep));
 
         CompleteStepResponse response = service.complete(SESSION_ID, 11L, visitor,

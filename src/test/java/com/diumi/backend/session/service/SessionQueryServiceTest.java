@@ -154,7 +154,7 @@ class SessionQueryServiceTest {
                                  List<ScenarioStep> steps) {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
         when(resultRepository.findCompletedStepIds(SESSION_ID)).thenReturn(completed);
-        when(stepRepository.findAllByScenarioIdOrderByStepOrderAsc(1L)).thenReturn(steps);
+        when(stepRepository.findAllByScenario_IdOrderByStepOrderAsc(1L)).thenReturn(steps);
     }
 
     private ExperienceSession session(SessionType type) {
