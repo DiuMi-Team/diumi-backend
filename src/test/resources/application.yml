@@ -15,4 +15,5 @@ openai:
   base-url: https://api.openai.com
   realtime:
     model: gpt-realtime
+    transcription-model: gpt-transcribe
     client-secret-ttl-seconds: 600

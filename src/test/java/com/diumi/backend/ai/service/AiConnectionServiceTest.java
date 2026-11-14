@@ -15,10 +15,13 @@ import com.diumi.backend.ai.client.OpenAiRealtimeClient.ClientSecret;
 import com.diumi.backend.ai.client.OpenAiRealtimeClientException;
 import com.diumi.backend.ai.dto.StartAiConnectionRequest;
 import com.diumi.backend.ai.dto.StartAiConnectionResponse;
+import com.diumi.backend.ai.prompt.AiPromptFactory;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
 import com.diumi.backend.common.exception.ErrorCode;
 import com.diumi.backend.mission.entity.Mission;
+import com.diumi.backend.mission.entity.MissionStepGuide;
+import com.diumi.backend.mission.repository.MissionStepGuideRepository;
 import com.diumi.backend.scenario.entity.Scenario;
 import com.diumi.backend.scenario.entity.ScenarioStep;
 import com.diumi.backend.scenario.repository.ScenarioStepRepository;
@@ -46,6 +49,7 @@ class AiConnectionServiceTest {
 
     @Mock ExperienceSessionRepository sessionRepository;
     @Mock ScenarioStepRepository stepRepository;
+    @Mock MissionStepGuideRepository missionStepGuideRepository;
     @Mock UserActionRepository actionRepository;
     @Mock OpenAiRealtimeClient realtimeClient;
 
@@ -58,11 +62,12 @@ class AiConnectionServiceTest {
     @BeforeEach
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-10-26T05:40:00Z"), TimeConfig.KST);
-        service = new AiConnectionService(sessionRepository, stepRepository, actionRepository,
-                realtimeClient, clock);
+        service = new AiConnectionService(sessionRepository, stepRepository, missionStepGuideRepository,
+                actionRepository, realtimeClient, new AiPromptFactory(), clock);
         visitor = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
         scenario = new Scenario(1L, "CAFE", "카페 주문", "주문", "image.png", true);
         mission = new Mission(scenario, "아메리카노", "주문", "EASY", "{}", true);
+        setId(mission, 101L);
         step = new ScenarioStep(scenario, "PAY", 4, "결제하기", null);
         setId(step, 14L);
     }
@@ -71,6 +76,9 @@ class AiConnectionServiceTest {
     void startsRealtimeConnectionAndRecordsAiHelp() {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
         when(stepRepository.findById(14L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any())).thenReturn(
+                Optional.of(new MissionStepGuide(mission, step,
+                        "카드를 카드 투입구에 넣어 주세요.", "CARD_READER")));
         when(realtimeClient.createClientSecret(any(), any())).thenReturn(
                 new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
 
@@ -81,6 +89,12 @@ class AiConnectionServiceTest {
         assertThat(response.model()).isEqualTo("gpt-realtime");
         assertThat(response.conversationId()).isEqualTo("sess_7f3a");
         assertThat(response.expiresAt().getOffset().getTotalSeconds()).isEqualTo(9 * 3600);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("카드를 카드 투입구에 넣어 주세요.", "CARD_READER")
+                .doesNotContain("null");
 
         ArgumentCaptor<UserAction> actionCaptor = ArgumentCaptor.forClass(UserAction.class);
         verify(actionRepository).save(actionCaptor.capture());

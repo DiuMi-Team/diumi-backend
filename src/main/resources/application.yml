@@ -13,4 +13,5 @@ openai:
   base-url: ${OPENAI_BASE_URL:https://api.openai.com}
   realtime:
     model: ${OPENAI_REALTIME_MODEL:gpt-realtime}
+    transcription-model: ${OPENAI_REALTIME_TRANSCRIPTION_MODEL:gpt-transcribe}
     client-secret-ttl-seconds: ${OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS:600}
