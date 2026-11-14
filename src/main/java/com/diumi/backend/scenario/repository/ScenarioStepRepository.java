@@ -6,9 +6,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ScenarioStepRepository extends JpaRepository<ScenarioStep, Long> {
-    long countByScenarioId(Long scenarioId);
-    Optional<ScenarioStep> findFirstByScenarioIdOrderByStepOrderAsc(Long scenarioId);
-    Optional<ScenarioStep> findFirstByScenarioIdAndStepOrderGreaterThanOrderByStepOrderAsc(
+    long countByScenario_Id(Long scenarioId);
+    Optional<ScenarioStep> findFirstByScenario_IdOrderByStepOrderAsc(Long scenarioId);
+    Optional<ScenarioStep> findFirstByScenario_IdAndStepOrderGreaterThanOrderByStepOrderAsc(
             Long scenarioId, int stepOrder);
-    List<ScenarioStep> findAllByScenarioIdOrderByStepOrderAsc(Long scenarioId);
+    List<ScenarioStep> findAllByScenario_IdOrderByStepOrderAsc(Long scenarioId);
 }
