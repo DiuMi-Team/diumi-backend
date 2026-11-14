@@ -53,6 +53,8 @@ public class ScenarioStep {
     }
 
     public Long getId() { return id; }
+    public Long getScenarioId() { return scenario.getId(); }
+    public String getStepCode() { return stepCode; }
     public int getStepOrder() { return stepOrder; }
     public String getStepName() { return stepName; }
     public String getGuideMessage() { return guideMessage; }
