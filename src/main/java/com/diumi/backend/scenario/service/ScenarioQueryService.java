@@ -36,7 +36,7 @@ public class ScenarioQueryService {
         Scenario scenario = scenarioRepository.findByIdAndActiveTrue(scenarioId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCENARIO_NOT_FOUND));
         List<ScenarioDetailResponse.Step> steps = stepRepository
-                .findAllByScenarioIdOrderByStepOrderAsc(scenario.getId()).stream()
+                .findAllByScenario_IdOrderByStepOrderAsc(scenario.getId()).stream()
                 .map(this::toStep)
                 .toList();
         return new ScenarioDetailResponse(scenario.getId(), scenario.getType(), scenario.getTitle(), steps);

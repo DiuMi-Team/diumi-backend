@@ -67,7 +67,7 @@ class ExperienceResultServiceTest {
         setId(mission, 101L);
         visitor = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
         sessionId = UUID.randomUUID();
-        lenient().when(stepRepository.countByScenarioId(1L)).thenReturn(4L);
+        lenient().when(stepRepository.countByScenario_Id(1L)).thenReturn(4L);
     }
 
     @Test
