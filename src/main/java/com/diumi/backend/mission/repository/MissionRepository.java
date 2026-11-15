@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MissionRepository extends JpaRepository<Mission, Long> {
-    List<Mission> findAllByScenarioIdAndActiveTrueOrderByIdAsc(Long scenarioId);
-    List<Mission> findAllByScenarioIdAndDifficultyAndActiveTrueOrderByIdAsc(Long scenarioId, String difficulty);
+    List<Mission> findAllByScenario_IdAndActiveTrueOrderByIdAsc(Long scenarioId);
+    List<Mission> findAllByScenario_IdAndDifficultyAndActiveTrueOrderByIdAsc(
+            Long scenarioId, String difficulty);
 }
