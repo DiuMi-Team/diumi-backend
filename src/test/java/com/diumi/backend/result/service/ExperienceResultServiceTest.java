@@ -16,14 +16,17 @@ import com.diumi.backend.common.exception.ErrorCode;
 import com.diumi.backend.mission.entity.Mission;
 import com.diumi.backend.result.dto.EndSessionRequest;
 import com.diumi.backend.result.dto.EndSessionResponse;
+import com.diumi.backend.result.dto.SessionResultResponse;
 import com.diumi.backend.result.entity.ExperienceResult;
 import com.diumi.backend.result.repository.ExperienceResultRepository;
 import com.diumi.backend.scenario.entity.Scenario;
+import com.diumi.backend.scenario.entity.ScenarioStep;
 import com.diumi.backend.scenario.repository.ScenarioStepRepository;
 import com.diumi.backend.session.entity.ExperienceSession;
 import com.diumi.backend.session.entity.SessionStatus;
 import com.diumi.backend.session.entity.SessionType;
 import com.diumi.backend.session.repository.ExperienceSessionRepository;
+import com.diumi.backend.stepresult.entity.StepResult;
 import com.diumi.backend.stepresult.repository.StepResultRepository;
 import com.diumi.backend.visitor.entity.AnonymousVisitor;
 import java.lang.reflect.Field;
@@ -156,6 +159,65 @@ class ExperienceResultServiceTest {
         assertThatThrownBy(() -> service.end(sessionId, visitor, new EndSessionRequest(SessionStatus.IN_PROGRESS)))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.errorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
+    }
+
+    @Test
+    void resultIncludesWrongSteps() throws Exception {
+        ExperienceSession session = givenSession(SessionType.REAL_MISSION, mission);
+        session.end(SessionStatus.COMPLETED, LocalDateTime.of(2026, 10, 6, 14, 33, 10));
+        when(resultRepository.findById(sessionId)).thenReturn(Optional.of(
+                new ExperienceResult(sessionId, true, 130, 2, 1, 1, LocalDateTime.now())));
+        ScenarioStep optionStep = new ScenarioStep(scenario, "SELECT_OPTION", 2, "옵션 고르기", null);
+        setId(optionStep, 12L);
+        when(stepResultRepository.findWrongStepResults(sessionId)).thenReturn(List.of(
+                new StepResult(session, optionStep, 5000, 2, 0, LocalDateTime.now())));
+
+        SessionResultResponse response = service.getResult(sessionId, visitor);
+
+        assertThat(response.scenarioTitle()).isEqualTo("카페");
+        assertThat(response.missionTitle()).isEqualTo("아메리카노 주문하기");
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.elapsedSeconds()).isEqualTo(130);
+        assertThat(response.errorCount()).isEqualTo(2);
+        assertThat(response.wrongSteps()).hasSize(1);
+        assertThat(response.wrongSteps().get(0).stepId()).isEqualTo(12L);
+        assertThat(response.wrongSteps().get(0).stepName()).isEqualTo("옵션 고르기");
+        assertThat(response.wrongSteps().get(0).errorCount()).isEqualTo(2);
+    }
+
+    @Test
+    void freeSessionResultHasNoWrongSteps() {
+        givenSession(SessionType.REAL_FREE, null);
+        when(resultRepository.findById(sessionId)).thenReturn(Optional.of(
+                new ExperienceResult(sessionId, null, 60, null, 0, 0, LocalDateTime.now())));
+
+        SessionResultResponse response = service.getResult(sessionId, visitor);
+
+        assertThat(response.missionTitle()).isNull();
+        assertThat(response.isSuccess()).isNull();
+        assertThat(response.errorCount()).isNull();
+        assertThat(response.wrongSteps()).isEmpty();
+        verify(stepResultRepository, never()).findWrongStepResults(any());
+    }
+
+    @Test
+    void resultNotFoundWhenSessionHasNoResult() {
+        givenSession(SessionType.REAL_MISSION, mission);
+        when(resultRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getResult(sessionId, visitor))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.errorCode()).isEqualTo(ErrorCode.RESULT_NOT_FOUND));
+    }
+
+    @Test
+    void otherVisitorCannotReadResult() {
+        givenSession(SessionType.REAL_MISSION, mission);
+        AnonymousVisitor other = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
+
+        assertThatThrownBy(() -> service.getResult(sessionId, other))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.errorCode()).isEqualTo(ErrorCode.FORBIDDEN_SESSION));
     }
 
     private ExperienceSession givenSession(SessionType type, Mission sessionMission) {

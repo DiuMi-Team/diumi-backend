@@ -16,4 +16,13 @@ public interface StepResultRepository extends JpaRepository<StepResult, Long> {
             order by result.step.stepOrder asc
             """)
     List<Long> findCompletedStepIds(@Param("sessionId") UUID sessionId);
+
+    @Query("""
+            select result from StepResult result
+            join fetch result.step
+            where result.session.id = :sessionId
+              and result.errorCount > 0
+            order by result.step.stepOrder asc
+            """)
+    List<StepResult> findWrongStepResults(@Param("sessionId") UUID sessionId);
 }

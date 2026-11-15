@@ -57,4 +57,6 @@ public class StepResult {
     }
 
     public Long getId() { return id; }
+    public ScenarioStep getStep() { return step; }
+    public int getErrorCount() { return errorCount; }
 }
