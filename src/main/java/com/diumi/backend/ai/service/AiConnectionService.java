@@ -8,9 +8,15 @@ import com.diumi.backend.ai.client.OpenAiRealtimeClient.ClientSecret;
 import com.diumi.backend.ai.client.OpenAiRealtimeClientException;
 import com.diumi.backend.ai.dto.StartAiConnectionRequest;
 import com.diumi.backend.ai.dto.StartAiConnectionResponse;
+import com.diumi.backend.ai.guide.entity.AiGuideRule;
+import com.diumi.backend.ai.guide.repository.AiGuideRuleRepository;
+import com.diumi.backend.ai.prompt.AiMissionContextFactory;
+import com.diumi.backend.ai.prompt.AiPromptFactory;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
 import com.diumi.backend.common.exception.ErrorCode;
+import com.diumi.backend.mission.entity.MissionStepGuide;
+import com.diumi.backend.mission.repository.MissionStepGuideRepository;
 import com.diumi.backend.scenario.entity.ScenarioStep;
 import com.diumi.backend.scenario.repository.ScenarioStepRepository;
 import com.diumi.backend.session.entity.ExperienceSession;
@@ -22,6 +28,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,19 +37,31 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiConnectionService {
     private final ExperienceSessionRepository sessionRepository;
     private final ScenarioStepRepository stepRepository;
+    private final MissionStepGuideRepository missionStepGuideRepository;
+    private final AiGuideRuleRepository aiGuideRuleRepository;
     private final UserActionRepository actionRepository;
     private final OpenAiRealtimeClient realtimeClient;
+    private final AiPromptFactory promptFactory;
+    private final AiMissionContextFactory missionContextFactory;
     private final Clock clock;
 
     public AiConnectionService(ExperienceSessionRepository sessionRepository,
                                ScenarioStepRepository stepRepository,
+                               MissionStepGuideRepository missionStepGuideRepository,
+                               AiGuideRuleRepository aiGuideRuleRepository,
                                UserActionRepository actionRepository,
                                OpenAiRealtimeClient realtimeClient,
+                               AiPromptFactory promptFactory,
+                               AiMissionContextFactory missionContextFactory,
                                Clock clock) {
         this.sessionRepository = sessionRepository;
         this.stepRepository = stepRepository;
+        this.missionStepGuideRepository = missionStepGuideRepository;
+        this.aiGuideRuleRepository = aiGuideRuleRepository;
         this.actionRepository = actionRepository;
         this.realtimeClient = realtimeClient;
+        this.promptFactory = promptFactory;
+        this.missionContextFactory = missionContextFactory;
         this.clock = clock;
     }
 
@@ -61,8 +80,15 @@ public class AiConnectionService {
 
         ClientSecret secret;
         try {
+            MissionStepGuide missionGuide = findMissionGuide(session, step);
+            String screenCode = resolveScreenCode(request, step);
+            List<AiGuideRule> guideRules = aiGuideRuleRepository
+                    .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                            session.getScenarioType(), List.of("COMMON", screenCode));
+            validateRequestedScreenCode(request, screenCode, guideRules);
             secret = realtimeClient.createClientSecret(visitor.getId().toString(),
-                    createInstructions(session, step));
+                    promptFactory.create(session, step, screenCode, missionGuide,
+                            missionContextFactory.create(session, step), guideRules));
         } catch (OpenAiRealtimeClientException exception) {
             throw new BusinessException(ErrorCode.AI_CONNECTION_FAILED);
         }
@@ -87,13 +113,27 @@ public class AiConnectionService {
         }
     }
 
-    private String createInstructions(ExperienceSession session, ScenarioStep step) {
-        return """
-                당신은 고령 사용자를 돕는 디지털 생활 음성 도우미입니다.
-                현재 시나리오: %s
-                현재 단계: %s
-                사용자의 현재 단계 수행에 필요한 내용만 쉽고 짧은 한국어로 답하세요.
-                한 번의 연결에서는 질문 하나에만 답하고, 모르는 내용은 추측하지 마세요.
-                """.formatted(session.getScenarioTitle(), step.getStepName()).strip();
+    private MissionStepGuide findMissionGuide(ExperienceSession session, ScenarioStep step) {
+        if (session.getMissionId() == null) {
+            return null;
+        }
+        return missionStepGuideRepository.findByMissionIdAndStepId(
+                session.getMissionId(), step.getId()).orElse(null);
+    }
+
+    private String resolveScreenCode(StartAiConnectionRequest request, ScenarioStep step) {
+        return request.screenCode() == null ? step.getStepCode() : request.screenCode();
+    }
+
+    private void validateRequestedScreenCode(StartAiConnectionRequest request, String screenCode,
+                                             List<AiGuideRule> guideRules) {
+        if (request.screenCode() == null) {
+            return;
+        }
+        boolean registered = guideRules.stream()
+                .anyMatch(rule -> screenCode.equals(rule.getScreenCode()));
+        if (!registered) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
     }
 }

@@ -52,5 +52,7 @@ public class Mission {
 
     public Long getId() { return id; }
     public Long getScenarioId() { return scenario.getId(); }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
     public String getTargetData() { return targetData; }
 }

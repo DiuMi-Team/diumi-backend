@@ -22,7 +22,7 @@ class OpenAiRealtimeClientTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         OpenAiProperties properties = new OpenAiProperties("sk-test", URI.create("https://api.openai.com"),
-                new OpenAiProperties.Realtime("gpt-realtime", 600));
+                new OpenAiProperties.Realtime("gpt-realtime", "gpt-transcribe", 600));
         OpenAiRealtimeClient client = new OpenAiRealtimeClient(builder, properties);
 
         server.expect(requestTo("https://api.openai.com/v1/realtime/client_secrets"))
@@ -37,7 +37,16 @@ class OpenAiRealtimeClientTest {
                             "model":"gpt-realtime",
                             "output_modalities":["audio"],
                             "instructions":"짧게 안내하세요.",
-                            "tool_choice":"none"
+                            "tool_choice":"none",
+                            "audio":{
+                              "input":{
+                                "transcription":{
+                                  "model":"gpt-transcribe",
+                                  "language":"ko",
+                                  "prompt":"한국어 키오스크 이용 질문을 정확히 전사하세요."
+                                }
+                              }
+                            }
                           }
                         }
                         """))

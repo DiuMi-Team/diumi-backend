@@ -31,7 +31,12 @@ public class OpenAiRealtimeClient {
         ClientSecretRequest request = new ClientSecretRequest(
                 new ExpiresAfter("created_at", properties.realtime().clientSecretTtlSeconds()),
                 new RealtimeSession("realtime", properties.realtime().model(), List.of("audio"),
-                        instructions, "none"));
+                        instructions, "none",
+                        new RealtimeAudio(new RealtimeAudioInput(
+                                new AudioTranscription(
+                                        properties.realtime().transcriptionModel(),
+                                        "ko",
+                                        "한국어 키오스크 이용 질문을 정확히 전사하세요.")))));
         try {
             ClientSecretResponse response = restClient.post()
                     .uri(CLIENT_SECRET_PATH)
@@ -71,8 +76,18 @@ public class OpenAiRealtimeClient {
             String model,
             @JsonProperty("output_modalities") List<String> outputModalities,
             String instructions,
-            @JsonProperty("tool_choice") String toolChoice
+            @JsonProperty("tool_choice") String toolChoice,
+            RealtimeAudio audio
     ) {
+    }
+
+    private record RealtimeAudio(RealtimeAudioInput input) {
+    }
+
+    private record RealtimeAudioInput(AudioTranscription transcription) {
+    }
+
+    private record AudioTranscription(String model, String language, String prompt) {
     }
 
     private record ClientSecretResponse(
