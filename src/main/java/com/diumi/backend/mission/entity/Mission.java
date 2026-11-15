@@ -38,6 +38,9 @@ public class Mission {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
+    @Column(name = "estimated_minutes")
+    private Integer estimatedMinutes;
+
     protected Mission() {
     }
 
@@ -54,5 +57,7 @@ public class Mission {
     public Long getScenarioId() { return scenario.getId(); }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
+    public String getDifficulty() { return difficulty; }
+    public Integer getEstimatedMinutes() { return estimatedMinutes; }
     public String getTargetData() { return targetData; }
 }
