@@ -64,7 +64,5 @@ public class Scenario {
 
     public boolean isActive() {
         return active;
-    public String getType() {
-        return type;
     }
 }

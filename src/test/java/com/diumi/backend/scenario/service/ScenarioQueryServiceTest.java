@@ -64,7 +64,7 @@ class ScenarioQueryServiceTest {
         setId(menu, 11L);
         setId(option, 12L);
         when(scenarioRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(scenario));
-        when(stepRepository.findAllByScenarioIdOrderByStepOrderAsc(1L)).thenReturn(List.of(menu, option));
+        when(stepRepository.findAllByScenario_IdOrderByStepOrderAsc(1L)).thenReturn(List.of(menu, option));
 
         ScenarioDetailResponse response = service.getDetail(1L);
 

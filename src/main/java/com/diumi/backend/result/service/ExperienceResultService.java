@@ -112,7 +112,7 @@ public class ExperienceResultService {
         if (!session.getType().requiresMission()) {
             return;
         }
-        long totalSteps = stepRepository.countByScenarioId(session.getScenarioId());
+        long totalSteps = stepRepository.countByScenario_Id(session.getScenarioId());
         long completedSteps = stepResultRepository.findCompletedStepIds(session.getId()).size();
         if (completedSteps < totalSteps) {
             throw new BusinessException(ErrorCode.SESSION_NOT_READY_TO_COMPLETE);
@@ -141,7 +141,7 @@ public class ExperienceResultService {
      * 중간에 틀렸더라도 결국 정답을 골랐다면 성공이다.
      */
     private boolean isMissionSuccess(ExperienceSession session) {
-        long totalSteps = stepRepository.countByScenarioId(session.getScenarioId());
+        long totalSteps = stepRepository.countByScenario_Id(session.getScenarioId());
         long stepsWithValidAction = actionRepository.countStepsWithValidAction(session.getId());
         return totalSteps > 0 && stepsWithValidAction >= totalSteps;
     }
