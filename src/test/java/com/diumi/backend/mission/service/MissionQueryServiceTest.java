@@ -44,7 +44,7 @@ class MissionQueryServiceTest {
         setField(mission, "id", 101L);
         setField(mission, "estimatedMinutes", 3);
         when(scenarioRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(scenario));
-        when(missionRepository.findAllByScenarioIdAndActiveTrueOrderByIdAsc(1L)).thenReturn(List.of(mission));
+        when(missionRepository.findAllByScenario_IdAndActiveTrueOrderByIdAsc(1L)).thenReturn(List.of(mission));
 
         MissionListResponse response = service.getMissions(1L, null);
 
@@ -59,13 +59,13 @@ class MissionQueryServiceTest {
     @Test
     void filtersByDifficulty() {
         when(scenarioRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(scenario));
-        when(missionRepository.findAllByScenarioIdAndDifficultyAndActiveTrueOrderByIdAsc(1L, "HARD"))
+        when(missionRepository.findAllByScenario_IdAndDifficultyAndActiveTrueOrderByIdAsc(1L, "HARD"))
                 .thenReturn(List.of());
 
         MissionListResponse response = service.getMissions(1L, MissionDifficulty.HARD);
 
         assertThat(response.missions()).isEmpty();
-        verify(missionRepository, never()).findAllByScenarioIdAndActiveTrueOrderByIdAsc(anyLong());
+        verify(missionRepository, never()).findAllByScenario_IdAndActiveTrueOrderByIdAsc(anyLong());
     }
 
     @Test

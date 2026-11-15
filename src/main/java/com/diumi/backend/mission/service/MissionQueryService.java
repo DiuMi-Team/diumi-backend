@@ -28,8 +28,8 @@ public class MissionQueryService {
         }
 
         List<Mission> missions = difficulty == null
-                ? missionRepository.findAllByScenarioIdAndActiveTrueOrderByIdAsc(scenarioId)
-                : missionRepository.findAllByScenarioIdAndDifficultyAndActiveTrueOrderByIdAsc(
+                ? missionRepository.findAllByScenario_IdAndActiveTrueOrderByIdAsc(scenarioId)
+                : missionRepository.findAllByScenario_IdAndDifficultyAndActiveTrueOrderByIdAsc(
                         scenarioId, difficulty.name());
         return new MissionListResponse(missions.stream().map(this::toSummary).toList());
     }
