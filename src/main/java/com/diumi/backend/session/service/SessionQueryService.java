@@ -55,7 +55,7 @@ public class SessionQueryService {
         }
 
         List<Long> completedStepIds = resultRepository.findCompletedStepIds(sessionId);
-        List<ScenarioStep> steps = stepRepository.findAllByScenarioIdOrderByStepOrderAsc(
+        List<ScenarioStep> steps = stepRepository.findAllByScenario_IdOrderByStepOrderAsc(
                 session.getScenarioId());
         ScenarioStep current = resolveCurrentStep(session, steps, completedStepIds);
 

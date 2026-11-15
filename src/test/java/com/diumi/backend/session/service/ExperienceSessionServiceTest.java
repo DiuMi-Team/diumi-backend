@@ -58,9 +58,9 @@ class ExperienceSessionServiceTest {
         setId(firstStep, 11L);
         visitor = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
         when(scenarioRepository.findById(1L)).thenReturn(Optional.of(scenario));
-        lenient().when(scenarioStepRepository.findFirstByScenarioIdOrderByStepOrderAsc(1L))
+        lenient().when(scenarioStepRepository.findFirstByScenario_IdOrderByStepOrderAsc(1L))
                 .thenReturn(Optional.of(firstStep));
-        lenient().when(scenarioStepRepository.countByScenarioId(1L)).thenReturn(4L);
+        lenient().when(scenarioStepRepository.countByScenario_Id(1L)).thenReturn(4L);
         lenient().when(sessionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 

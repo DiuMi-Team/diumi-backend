@@ -50,9 +50,9 @@ public class ExperienceSessionService {
         Scenario scenario = scenarioRepository.findById(request.scenarioId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCENARIO_NOT_FOUND));
         Mission mission = resolveMission(request, scenario);
-        ScenarioStep firstStep = scenarioStepRepository.findFirstByScenarioIdOrderByStepOrderAsc(scenario.getId())
+        ScenarioStep firstStep = scenarioStepRepository.findFirstByScenario_IdOrderByStepOrderAsc(scenario.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REQUEST));
-        long totalSteps = scenarioStepRepository.countByScenarioId(scenario.getId());
+        long totalSteps = scenarioStepRepository.countByScenario_Id(scenario.getId());
 
         LocalDateTime startedAt = LocalDateTime.now(clock);
         ExperienceSession session = sessionRepository.save(new ExperienceSession(

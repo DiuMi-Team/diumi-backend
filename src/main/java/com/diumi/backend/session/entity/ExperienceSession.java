@@ -67,6 +67,7 @@ public class ExperienceSession {
 
     public UUID getId() { return id; }
     public Long getScenarioId() { return scenario.getId(); }
+    public String getScenarioType() { return scenario.getType(); }
     public String getScenarioTitle() { return scenario.getTitle(); }
     public Mission getMission() { return mission; }
     public Long getMissionId() { return mission == null ? null : mission.getId(); }

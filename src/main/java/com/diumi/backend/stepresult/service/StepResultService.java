@@ -97,14 +97,14 @@ public class StepResultService {
     private ScenarioStep findNextStep(ExperienceSession session, ScenarioStep completedStep) {
         if (session.getType() != SessionType.REAL_FREE) {
             return stepRepository
-                    .findFirstByScenarioIdAndStepOrderGreaterThanOrderByStepOrderAsc(
+                    .findFirstByScenario_IdAndStepOrderGreaterThanOrderByStepOrderAsc(
                             session.getScenarioId(), completedStep.getStepOrder())
                     .orElse(null);
         }
 
         Set<Long> completedIds = new HashSet<>(resultRepository.findCompletedStepIds(session.getId()));
         completedIds.add(completedStep.getId());
-        return stepRepository.findAllByScenarioIdOrderByStepOrderAsc(session.getScenarioId()).stream()
+        return stepRepository.findAllByScenario_IdOrderByStepOrderAsc(session.getScenarioId()).stream()
                 .filter(candidate -> !completedIds.contains(candidate.getId()))
                 .findFirst()
                 .orElse(null);
