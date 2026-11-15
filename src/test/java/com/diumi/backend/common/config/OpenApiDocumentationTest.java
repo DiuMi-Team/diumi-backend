@@ -41,7 +41,8 @@ class OpenApiDocumentationTest {
     void documentsVisitorHeaderAndErrorCodes() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("X-Visitor-Id")))
+                .andExpect(jsonPath("$.paths['/visitors'].post.parameters").doesNotExist())
+                .andExpect(jsonPath("$.paths['/sessions'].post.parameters[?(@.name == 'X-Visitor-Id' && @.required == true)]").isNotEmpty())
                 .andExpect(content().string(containsString("VISITOR_REQUIRED")))
                 .andExpect(content().string(containsString("AI_CONNECTION_FAILED")))
                 .andExpect(content().string(containsString("SESSION_NOT_READY_TO_COMPLETE")));
