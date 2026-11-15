@@ -5,8 +5,23 @@ spring:
     property-naming-strategy: SNAKE_CASE
 
 server:
+  port: ${PORT:8080}
   servlet:
     context-path: /api/v1
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,https://diumi.vercel.app}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 springdoc:
   api-docs:

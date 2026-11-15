@@ -10,3 +10,8 @@
 
 방문자 등록(`POST /visitors`)을 제외한 API는 Swagger UI의 `X-Visitor-Id` 헤더에
 방문자 등록 API가 반환한 UUID를 입력해야 합니다.
+
+## 배포
+
+Railway 배포에 필요한 서비스 구성, 환경변수 및 확인 주소는
+[`docs/railway-deployment.md`](docs/railway-deployment.md)를 참고합니다.
