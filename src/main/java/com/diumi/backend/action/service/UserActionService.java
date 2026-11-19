@@ -2,6 +2,7 @@ package com.diumi.backend.action.service;
 
 import com.diumi.backend.action.dto.RecordActionRequest;
 import com.diumi.backend.action.dto.RecordActionResponse;
+import com.diumi.backend.action.entity.ActionType;
 import com.diumi.backend.action.entity.UserAction;
 import com.diumi.backend.action.repository.UserActionRepository;
 import com.diumi.backend.common.config.TimeConfig;
@@ -68,7 +69,7 @@ public class UserActionService {
         }
         validateOccurredAt(session, request.occurredAt());
 
-        Boolean valid = session.getType() == SessionType.REAL_FREE
+        Boolean valid = session.getType() == SessionType.REAL_FREE || isNavigation(request.actionType())
                 ? null
                 : evaluateAnswer(session, step, request);
         LocalDateTime occurredAt = LocalDateTime.ofInstant(request.occurredAt().toInstant(), TimeConfig.KST);
@@ -78,6 +79,11 @@ public class UserActionService {
         Feedback feedback = resolveFeedback(session, step, valid);
         return new RecordActionResponse(action.getId(), valid,
                 feedback.message(), feedback.highlightTargetCode());
+    }
+
+    /** 뒤로·처음으로는 틀린 행동이 아니라 따로 세므로(back_count) 채점하지 않는다. */
+    private boolean isNavigation(ActionType actionType) {
+        return actionType == ActionType.BACK || actionType == ActionType.HOME;
     }
 
     private void validateSession(ExperienceSession session, AnonymousVisitor visitor) {

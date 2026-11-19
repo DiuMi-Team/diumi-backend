@@ -177,6 +177,22 @@ class UserActionServiceTest {
     }
 
     @Test
+    void backAndHomeAreNotCountedAsWrong() throws Exception {
+        Mission mission = mission("""
+                {"SELECT_MENU":{"action_type":"SELECT","target_code":"MENU_AMERICANO"}}
+                """);
+        when(sessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(session(mission, SessionType.PRACTICE_MISSION)));
+
+        RecordActionResponse back = service.record(SESSION_ID, visitor, request(ActionType.BACK, null));
+        RecordActionResponse home = service.record(SESSION_ID, visitor, request(ActionType.HOME, null));
+
+        assertThat(back.isValid()).isNull();
+        assertThat(back.feedbackMessage()).isNull();
+        assertThat(home.isValid()).isNull();
+    }
+
+    @Test
     void stepWithoutAnswerIsNotEvaluated() throws Exception {
         Mission mission = mission("""
                 {"PAYMENT":{"action_type":"PAY","target_code":"PAY_CARD"}}
