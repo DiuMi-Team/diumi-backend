@@ -31,6 +31,8 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class UserActionService {
     private static final long ALLOWED_FUTURE_SKEW_MINUTES = 5;
+    // 브라우저 시계가 서버보다 조금 느려도 시작 직후 행동이 거절되지 않도록 허용하는 오차
+    private static final long ALLOWED_PAST_SKEW_SECONDS = 60;
 
     private final ExperienceSessionRepository sessionRepository;
     private final ScenarioStepRepository stepRepository;
@@ -89,19 +91,43 @@ public class UserActionService {
 
     private void validateOccurredAt(ExperienceSession session, java.time.OffsetDateTime occurredAt) {
         Instant occurredInstant = occurredAt.toInstant();
-        Instant startedInstant = session.getStartedAt().atZone(TimeConfig.KST).toInstant();
+        Instant startedInstant = session.getStartedAt().atZone(TimeConfig.KST).toInstant()
+                .truncatedTo(ChronoUnit.SECONDS)
+                .minusSeconds(ALLOWED_PAST_SKEW_SECONDS);
         Instant latestAllowed = clock.instant().plus(ALLOWED_FUTURE_SKEW_MINUTES, ChronoUnit.MINUTES);
         if (occurredInstant.isBefore(startedInstant) || occurredInstant.isAfter(latestAllowed)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
     }
 
-    private boolean evaluateAnswer(ExperienceSession session, ScenarioStep step, RecordActionRequest request) {
+    /**
+     * 현재 단계의 정답 조건과 사용자 행동을 비교한다.
+     * - 단계 정답이 객체 하나면 그 조건과 같아야 정답이다.
+     * - 단계 정답에 accept 배열이 있으면 그중 하나와 같으면 정답이다.
+     *   (예: 옵션 화면에서 ICE, Large, 수량 2, 담기 버튼은 모두 맞는 행동)
+     * - 미션에 이 단계 정답이 없으면 채점하지 않는다(null).
+     */
+    private Boolean evaluateAnswer(ExperienceSession session, ScenarioStep step, RecordActionRequest request) {
         JsonNode expected = readTargetData(session).get(step.getStepCode());
-        if (expected == null || !expected.isObject() || expected.isEmpty()) {
+        if (expected == null || expected.isNull()) {
+            return null;
+        }
+        JsonNode accept = expected.get("accept");
+        if (accept != null && accept.isArray()) {
+            for (JsonNode candidate : accept) {
+                if (matches(candidate, request)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!expected.isObject() || expected.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
+        return matches(expected, request);
+    }
 
+    private boolean matches(JsonNode expected, RecordActionRequest request) {
         JsonNode expectedActionType = expected.get("action_type");
         JsonNode expectedTargetCode = expected.get("target_code");
         JsonNode expectedActionData = expected.get("action_data");
