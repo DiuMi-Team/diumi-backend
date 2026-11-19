@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -61,7 +62,8 @@ class ExperienceResultServiceTest {
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-10-06T05:33:10Z"), TimeConfig.KST);
         service = new ExperienceResultService(sessionRepository, stepRepository, stepResultRepository,
-                actionRepository, resultRepository, clock);
+                actionRepository, resultRepository,
+                new MissionConditionEvaluator(JsonMapper.builder().build()), clock);
         scenario = new Scenario(1L, "CAFE", "카페", "설명", "cafe.png", true);
         mission = new Mission(scenario, "아메리카노 주문하기", "설명", "EASY", "{}", true);
         setId(mission, 101L);

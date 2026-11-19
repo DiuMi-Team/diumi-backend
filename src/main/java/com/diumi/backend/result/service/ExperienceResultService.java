@@ -33,6 +33,7 @@ public class ExperienceResultService {
     private final StepResultRepository stepResultRepository;
     private final UserActionRepository actionRepository;
     private final ExperienceResultRepository resultRepository;
+    private final MissionConditionEvaluator conditionEvaluator;
     private final Clock clock;
 
     public ExperienceResultService(ExperienceSessionRepository sessionRepository,
@@ -40,12 +41,14 @@ public class ExperienceResultService {
                                    StepResultRepository stepResultRepository,
                                    UserActionRepository actionRepository,
                                    ExperienceResultRepository resultRepository,
+                                   MissionConditionEvaluator conditionEvaluator,
                                    Clock clock) {
         this.sessionRepository = sessionRepository;
         this.stepRepository = stepRepository;
         this.stepResultRepository = stepResultRepository;
         this.actionRepository = actionRepository;
         this.resultRepository = resultRepository;
+        this.conditionEvaluator = conditionEvaluator;
         this.clock = clock;
     }
 
@@ -84,10 +87,12 @@ public class ExperienceResultService {
                         .map(this::toWrongStep)
                         .toList();
         String missionTitle = session.getMission() == null ? null : session.getMission().getTitle();
+        List<SessionResultResponse.ConditionResult> conditions = evaluateConditions(session);
 
         return new SessionResultResponse(session.getId(), session.getType(), session.getScenarioTitle(),
                 missionTitle, result.getSuccess(), result.getElapsedSeconds(), result.getAiHelpCount(),
-                result.getErrorCount(), result.getBackCount(), wrongSteps);
+                result.getErrorCount(), result.getBackCount(), wrongSteps,
+                conditions, passRate(conditions));
     }
 
     private SessionResultResponse.WrongStep toWrongStep(StepResult stepResult) {
@@ -140,9 +145,30 @@ public class ExperienceResultService {
      * 모든 단계에서 정답 행동을 한 번 이상 했으면 미션 성공으로 본다.
      * 중간에 틀렸더라도 결국 정답을 골랐다면 성공이다.
      */
+    /**
+     * 미션 성공 = 모든 단계에서 맞는 행동을 한 번 이상 했고, 미션에 완료 조건이 있으면 그 조건도 모두 맞힌 경우.
+     */
     private boolean isMissionSuccess(ExperienceSession session) {
         long totalSteps = stepRepository.countByScenario_Id(session.getScenarioId());
         long stepsWithValidAction = actionRepository.countStepsWithValidAction(session.getId());
-        return totalSteps > 0 && stepsWithValidAction >= totalSteps;
+        boolean allStepsDone = totalSteps > 0 && stepsWithValidAction >= totalSteps;
+        return allStepsDone && evaluateConditions(session).stream()
+                .allMatch(SessionResultResponse.ConditionResult::passed);
+    }
+
+    private List<SessionResultResponse.ConditionResult> evaluateConditions(ExperienceSession session) {
+        if (session.getType() == SessionType.REAL_FREE || session.getMission() == null) {
+            return List.of();
+        }
+        return conditionEvaluator.evaluate(session.getMission().getTargetData(),
+                actionRepository.findAllBySessionIdOrderByOccurredAtAscIdAsc(session.getId()));
+    }
+
+    private Integer passRate(List<SessionResultResponse.ConditionResult> conditions) {
+        if (conditions.isEmpty()) {
+            return null;
+        }
+        long passed = conditions.stream().filter(SessionResultResponse.ConditionResult::passed).count();
+        return Math.toIntExact(Math.round(passed * 100.0 / conditions.size()));
     }
 }
