@@ -18,6 +18,7 @@ import com.diumi.backend.session.repository.ExperienceSessionRepository;
 import com.diumi.backend.visitor.entity.AnonymousVisitor;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,8 @@ public class ExperienceSessionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REQUEST));
         long totalSteps = scenarioStepRepository.countByScenario_Id(scenario.getId());
 
-        LocalDateTime startedAt = LocalDateTime.now(clock);
+        // DB(DATETIME)는 초 단위로 반올림해 저장하므로, 미리 초 단위로 잘라 저장값과 응답값을 같게 맞춘다.
+        LocalDateTime startedAt = LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
         ExperienceSession session = sessionRepository.save(new ExperienceSession(
                 UUID.randomUUID(), scenario, mission, visitor, request.sessionType(), startedAt));
 

@@ -3,13 +3,18 @@ package com.diumi.backend.action.repository;
 import com.diumi.backend.action.entity.UserAction;
 import com.diumi.backend.action.entity.ActionType;
 import java.util.UUID;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface UserActionRepository extends JpaRepository<UserAction, Long> {
     Optional<UserAction> findFirstBySessionIdOrderByOccurredAtDescIdDesc(UUID sessionId);
+
+    @EntityGraph(attributePaths = "step")
+    List<UserAction> findAllBySessionIdOrderByOccurredAtAscIdAsc(UUID sessionId);
 
     @Query("""
             select count(action) from UserAction action

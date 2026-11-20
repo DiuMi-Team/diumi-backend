@@ -25,7 +25,7 @@ class FlywayMigrationTest {
         try (Connection connection = DriverManager.getConnection(URL, "sa", "")) {
             assertThat(count(connection, "SELECT COUNT(*) FROM flyway_schema_history "
                     + "WHERE success = TRUE AND version IS NOT NULL"))
-                    .isEqualTo(10);
+                    .isEqualTo(11);
             assertThat(count(connection,
                     "SELECT COUNT(*) FROM ai_guide_rule WHERE scenario_type = 'CAFE'"))
                     .isEqualTo(43);
@@ -33,8 +33,14 @@ class FlywayMigrationTest {
                     "SELECT COUNT(*) FROM ai_guide_rule WHERE scenario_type = 'FAST_FOOD'"))
                     .isEqualTo(100);
             assertThat(count(connection,
+                    "SELECT COUNT(*) FROM scenario_step WHERE scenario_id = 1"))
+                    .isEqualTo(9);
+            assertThat(count(connection,
                     "SELECT COUNT(*) FROM scenario_step WHERE scenario_id = 2"))
-                    .isEqualTo(6);
+                    .isEqualTo(9);
+            assertThat(count(connection,
+                    "SELECT COUNT(*) FROM mission_step_guide"))
+                    .isEqualTo(36);
             assertThat(count(connection,
                     "SELECT COUNT(*) FROM mission WHERE scenario_id = 2 AND is_active = TRUE"))
                     .isEqualTo(2);

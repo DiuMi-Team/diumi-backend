@@ -158,6 +158,67 @@ class UserActionServiceTest {
                 () -> service.record(SESSION_ID, visitor, request(ActionType.SELECT, "TRAIN_1")));
     }
 
+    @Test
+    void acceptListAllowsAnyListedActionInStep() throws Exception {
+        Mission mission = mission("""
+                {"SELECT_MENU":{"accept":[
+                  {"action_type":"OPTION","target_code":"SIZE_LARGE"},
+                  {"action_type":"QUANTITY","action_data":{"quantity":2}},
+                  {"action_type":"NEXT","target_code":"BUTTON_ADD_TO_CART"}]}}
+                """);
+        when(sessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(session(mission, SessionType.REAL_MISSION)));
+        ObjectMapper mapper = new ObjectMapper();
+
+        assertThat(service.record(SESSION_ID, visitor, request(ActionType.OPTION, "SIZE_LARGE")).isValid()).isTrue();
+        assertThat(service.record(SESSION_ID, visitor, new RecordActionRequest(11L, ActionType.QUANTITY,
+                "QUANTITY_PLUS", mapper.readTree("{\"quantity\": 2}"), OCCURRED_AT)).isValid()).isTrue();
+        assertThat(service.record(SESSION_ID, visitor, request(ActionType.OPTION, "SIZE_REGULAR")).isValid()).isFalse();
+    }
+
+    @Test
+    void backAndHomeAreNotCountedAsWrong() throws Exception {
+        Mission mission = mission("""
+                {"SELECT_MENU":{"action_type":"SELECT","target_code":"MENU_AMERICANO"}}
+                """);
+        when(sessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(session(mission, SessionType.PRACTICE_MISSION)));
+
+        RecordActionResponse back = service.record(SESSION_ID, visitor, request(ActionType.BACK, null));
+        RecordActionResponse home = service.record(SESSION_ID, visitor, request(ActionType.HOME, null));
+
+        assertThat(back.isValid()).isNull();
+        assertThat(back.feedbackMessage()).isNull();
+        assertThat(home.isValid()).isNull();
+    }
+
+    @Test
+    void stepWithoutAnswerIsNotEvaluated() throws Exception {
+        Mission mission = mission("""
+                {"PAYMENT":{"action_type":"PAY","target_code":"PAY_CARD"}}
+                """);
+        when(sessionRepository.findById(SESSION_ID))
+                .thenReturn(Optional.of(session(mission, SessionType.REAL_MISSION)));
+
+        assertThat(service.record(SESSION_ID, visitor, request(ActionType.NEXT, "BUTTON_DONE")).isValid()).isNull();
+    }
+
+    @Test
+    void acceptsActionSentRightAfterRoundedStart() throws Exception {
+        Mission mission = mission("""
+                {"SELECT_MENU":{"action_type":"SELECT","target_code":"MENU_AMERICANO"}}
+                """);
+        // DB가 14:30:00.700을 14:30:01로 반올림해 저장한 상황
+        ExperienceSession session = new ExperienceSession(SESSION_ID, scenario, mission, visitor,
+                SessionType.REAL_MISSION, LocalDateTime.parse("2026-10-26T14:30:01"));
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+
+        RecordActionResponse response = service.record(SESSION_ID, visitor, new RecordActionRequest(11L,
+                ActionType.SELECT, "MENU_AMERICANO", null, OffsetDateTime.parse("2026-10-26T14:30:00.900+09:00")));
+
+        assertThat(response.isValid()).isTrue();
+    }
+
     private Mission mission(String targetData) throws Exception {
         Mission mission = new Mission(scenario, "아메리카노", "주문", "EASY", targetData, true);
         setId(mission, 101L);
