@@ -32,6 +32,7 @@ public class OpenAiRealtimeClient {
                 new ExpiresAfter("created_at", properties.realtime().clientSecretTtlSeconds()),
                 new RealtimeSession("realtime", properties.realtime().model(), List.of("audio"),
                         instructions, "none",
+                        new RealtimeReasoning("low"),
                         new RealtimeAudio(new RealtimeAudioInput(
                                 new AudioTranscription(
                                         properties.realtime().transcriptionModel(),
@@ -77,8 +78,12 @@ public class OpenAiRealtimeClient {
             @JsonProperty("output_modalities") List<String> outputModalities,
             String instructions,
             @JsonProperty("tool_choice") String toolChoice,
+            RealtimeReasoning reasoning,
             RealtimeAudio audio
     ) {
+    }
+
+    private record RealtimeReasoning(String effort) {
     }
 
     private record RealtimeAudio(RealtimeAudioInput input) {
