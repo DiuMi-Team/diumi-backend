@@ -38,6 +38,9 @@ class OpenAiRealtimeClientTest {
                             "output_modalities":["audio"],
                             "instructions":"짧게 안내하세요.",
                             "tool_choice":"none",
+                            "reasoning": {
+                              "effort": "low"
+                            },
                             "audio":{
                               "input":{
                                 "transcription":{
