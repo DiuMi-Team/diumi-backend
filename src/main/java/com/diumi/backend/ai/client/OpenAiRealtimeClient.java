@@ -12,6 +12,9 @@ import org.springframework.web.client.RestClientException;
 public class OpenAiRealtimeClient {
     private static final String CLIENT_SECRET_PATH = "/v1/realtime/client_secrets";
     private static final String SAFETY_IDENTIFIER_HEADER = "OpenAI-Safety-Identifier";
+    private static final double VAD_THRESHOLD = 0.5;
+    private static final int VAD_PREFIX_PADDING_MS = 300;
+    private static final int VAD_SILENCE_DURATION_MS = 2000;
 
     private final RestClient restClient;
     private final OpenAiProperties properties;
@@ -37,7 +40,14 @@ public class OpenAiRealtimeClient {
                                 new AudioTranscription(
                                         properties.realtime().transcriptionModel(),
                                         "ko",
-                                        "한국어 키오스크 이용 질문을 정확히 전사하세요.")))));
+                                        "한국어 키오스크 이용 질문을 정확히 전사하세요."),
+                                new RealtimeTurnDetection(
+                                        "server_vad",
+                                        VAD_THRESHOLD,
+                                        VAD_PREFIX_PADDING_MS,
+                                        VAD_SILENCE_DURATION_MS,
+                                        true,
+                                        true)))));
         try {
             ClientSecretResponse response = restClient.post()
                     .uri(CLIENT_SECRET_PATH)
@@ -89,7 +99,20 @@ public class OpenAiRealtimeClient {
     private record RealtimeAudio(RealtimeAudioInput input) {
     }
 
-    private record RealtimeAudioInput(AudioTranscription transcription) {
+    private record RealtimeAudioInput(
+            AudioTranscription transcription,
+            @JsonProperty("turn_detection") RealtimeTurnDetection turnDetection
+    ) {
+    }
+
+    private record RealtimeTurnDetection(
+            String type,
+            double threshold,
+            @JsonProperty("prefix_padding_ms") int prefixPaddingMs,
+            @JsonProperty("silence_duration_ms") int silenceDurationMs,
+            @JsonProperty("create_response") boolean createResponse,
+            @JsonProperty("interrupt_response") boolean interruptResponse
+    ) {
     }
 
     private record AudioTranscription(String model, String language, String prompt) {
