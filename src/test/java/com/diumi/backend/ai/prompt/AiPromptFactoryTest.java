@@ -89,7 +89,7 @@ class AiPromptFactoryTest {
                 .contains("화면 이름: 메뉴 고르기")
                 .contains("화면 설명: 음료 메뉴가 사진과 이름으로 나열된 화면입니다.")
                 .contains("아메리카노 [MENU_AMERICANO]: 커피 메뉴 버튼")
-                .contains("카페라테 [MENU_CAFE_LATTE]: 우유가 들어간 커피 메뉴 버튼")
+                .contains("카페라떼 [MENU_CAFE_LATTE]: 우유가 들어간 커피 메뉴 버튼")
                 .contains("[현재 화면 구성]에 없는 버튼은 안내하지 마세요")
                 .contains("안내 대상 코드와 같은 코드의 버튼")
                 .doesNotContain("현재 화면의 구성 정보가 등록되지 않았습니다")
@@ -152,7 +152,7 @@ class AiPromptFactoryTest {
                 "음료 메뉴가 사진과 이름으로 나열된 화면입니다.", true);
         return new AiScreenInfo(screen, List.of(
                 new AiScreenButton(1102L, "MENU_AMERICANO", "아메리카노", "커피 메뉴 버튼", 1),
-                new AiScreenButton(1102L, "MENU_CAFE_LATTE", "카페라테", "우유가 들어간 커피 메뉴 버튼", 2)));
+                new AiScreenButton(1102L, "MENU_CAFE_LATTE", "카페라떼", "우유가 들어간 커피 메뉴 버튼", 2)));
     }
 
     private Fixture fixture(SessionType type, String stepGuide) {

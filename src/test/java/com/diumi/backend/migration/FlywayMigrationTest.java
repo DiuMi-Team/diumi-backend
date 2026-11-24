@@ -25,7 +25,7 @@ class FlywayMigrationTest {
         try (Connection connection = DriverManager.getConnection(URL, "sa", "")) {
             assertThat(count(connection, "SELECT COUNT(*) FROM flyway_schema_history "
                     + "WHERE success = TRUE AND version IS NOT NULL"))
-                    .isEqualTo(13);
+                    .isEqualTo(14);
             assertThat(count(connection,
                     "SELECT COUNT(*) FROM ai_guide_rule WHERE scenario_type = 'CAFE'"))
                     .isEqualTo(43);
@@ -57,6 +57,15 @@ class FlywayMigrationTest {
                     + "WHERE c.scenario_type = 'CAFE' AND c.screen_code = 'SELECT_ORDER_TYPE' "
                     + "AND b.label = '매장에서 먹어요' AND b.button_code = 'ORDER_EAT_IN'"))
                     .isEqualTo(1);
+            assertThat(count(connection, "SELECT COUNT(*) FROM mission "
+                    + "WHERE CAST(target_data AS VARCHAR) LIKE '%MEAL_LARGE_SET%'"))
+                    .isEqualTo(0);
+            assertThat(count(connection, "SELECT COUNT(*) FROM mission_step_guide "
+                    + "WHERE (guide_message LIKE '%담기를 눌러%' AND guide_message NOT LIKE '%장바구니 담기%') OR guide_message LIKE '%건너뛰기%' "
+                    + "OR guide_message LIKE '%주문하러 가기%'"))
+                    .isEqualTo(0);
+            assertThat(count(connection, "SELECT COUNT(*) FROM mission_step_guide"))
+                    .isEqualTo(36);
         }
     }
 
