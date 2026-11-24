@@ -19,6 +19,10 @@ import com.diumi.backend.ai.guide.entity.AiGuideRule;
 import com.diumi.backend.ai.guide.repository.AiGuideRuleRepository;
 import com.diumi.backend.ai.prompt.AiMissionContextFactory;
 import com.diumi.backend.ai.prompt.AiPromptFactory;
+import com.diumi.backend.ai.screen.dto.AiScreenInfo;
+import com.diumi.backend.ai.screen.entity.AiScreenButton;
+import com.diumi.backend.ai.screen.entity.AiScreenContext;
+import com.diumi.backend.ai.screen.service.AiScreenInfoService;
 import tools.jackson.databind.ObjectMapper;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
@@ -56,6 +60,7 @@ class AiConnectionServiceTest {
     @Mock ScenarioStepRepository stepRepository;
     @Mock MissionStepGuideRepository missionStepGuideRepository;
     @Mock AiGuideRuleRepository aiGuideRuleRepository;
+    @Mock AiScreenInfoService screenInfoService;
     @Mock UserActionRepository actionRepository;
     @Mock OpenAiRealtimeClient realtimeClient;
 
@@ -69,7 +74,7 @@ class AiConnectionServiceTest {
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-10-26T05:40:00Z"), TimeConfig.KST);
         service = new AiConnectionService(sessionRepository, stepRepository, missionStepGuideRepository,
-                aiGuideRuleRepository, actionRepository, realtimeClient, new AiPromptFactory(),
+                aiGuideRuleRepository, screenInfoService, actionRepository, realtimeClient, new AiPromptFactory(),
                 new AiMissionContextFactory(new ObjectMapper()), clock);
         visitor = new AnonymousVisitor(UUID.randomUUID(), LocalDateTime.now(), LocalDateTime.now());
         scenario = new Scenario(1L, "CAFE", "카페 주문", "주문", "image.png", true);
@@ -206,6 +211,61 @@ class AiConnectionServiceTest {
                 .contains("세트 메뉴 버튼을 직접 눌러 주세요.")
                 .contains("제가 대신 누르거나 주문할 수는 없습니다.")
                 .doesNotContain("카드 결제 버튼을 직접 눌러 주세요.");
+    }
+
+    @Test
+    void addsScreenLayoutAndButtonsToPrompt() {
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
+        when(stepRepository.findById(14L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "CAFE", List.of("COMMON", "PAY")))
+                .thenReturn(List.of());
+        when(screenInfoService.find("CAFE", "PAY")).thenReturn(Optional.of(new AiScreenInfo(
+                new AiScreenContext("CAFE", "PAY", "결제 방식 고르기",
+                        "결제 수단 버튼이 나열된 화면입니다.", true),
+                List.of(new AiScreenButton(1107L, "PAY_CARD", "신용·체크카드",
+                        "카드로 결제할 때 누르는 버튼", 1)))));
+        when(realtimeClient.createClientSecret(any(), any())).thenReturn(
+                new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
+
+        service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L, null));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("화면 이름: 결제 방식 고르기")
+                .contains("신용·체크카드 [PAY_CARD]: 카드로 결제할 때 누르는 버튼")
+                .doesNotContain("현재 화면의 구성 정보가 등록되지 않았습니다");
+    }
+
+    @Test
+    void acceptsExplicitScreenCodeThatHasScreenInfoButNoRules() {
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session(SessionType.REAL_MISSION)));
+        when(stepRepository.findById(14L)).thenReturn(Optional.of(step));
+        when(missionStepGuideRepository.findByMissionIdAndStepId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(aiGuideRuleRepository
+                .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
+                        "CAFE", List.of("COMMON", "ADD_MORE_MENU")))
+                .thenReturn(List.of());
+        when(screenInfoService.find("CAFE", "ADD_MORE_MENU")).thenReturn(Optional.of(new AiScreenInfo(
+                new AiScreenContext("CAFE", "ADD_MORE_MENU", "메뉴 더 담기",
+                        "더 담을지 고르는 화면입니다.", true),
+                List.of(new AiScreenButton(1104L, "BUTTON_GO_CART", "주문하러 가기",
+                        "장바구니로 가는 버튼", 1)))));
+        when(realtimeClient.createClientSecret(any(), any())).thenReturn(
+                new ClientSecret("ek_test", 1792990800L, "sess_7f3a", "gpt-realtime"));
+
+        service.start(SESSION_ID, visitor, new StartAiConnectionRequest(14L, "ADD_MORE_MENU"));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeClient).createClientSecret(any(), promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("현재 화면 코드: ADD_MORE_MENU")
+                .contains("주문하러 가기 [BUTTON_GO_CART]");
     }
 
     @Test

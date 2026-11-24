@@ -1,6 +1,8 @@
 package com.diumi.backend.ai.prompt;
 
 import com.diumi.backend.ai.guide.entity.AiGuideRule;
+import com.diumi.backend.ai.screen.dto.AiScreenInfo;
+import com.diumi.backend.ai.screen.entity.AiScreenButton;
 import com.diumi.backend.mission.entity.MissionStepGuide;
 import com.diumi.backend.scenario.entity.ScenarioStep;
 import com.diumi.backend.session.entity.ExperienceSession;
@@ -13,7 +15,7 @@ public class AiPromptFactory {
     private static final String NO_TARGET = "제공되지 않음";
 
     public String create(ExperienceSession session, ScenarioStep step, String screenCode,
-                         MissionStepGuide missionGuide,
+                         AiScreenInfo screenInfo, MissionStepGuide missionGuide,
                          String missionContext, List<AiGuideRule> guideRules) {
         String guideMessage = firstNotBlank(
                 missionGuide == null ? null : missionGuide.getGuideMessage(),
@@ -23,6 +25,7 @@ public class AiPromptFactory {
                 missionGuide == null ? null : missionGuide.getHighlightTargetCode(),
                 NO_TARGET);
         String rules = formatRules(guideRules);
+        String screen = formatScreen(screenInfo);
 
         return """
                 [역할]
@@ -43,6 +46,9 @@ public class AiPromptFactory {
                 - 단계 안내: %s
                 - 안내 대상 코드: %s
 
+                [현재 화면 구성]
+                %s
+
                 [오늘의 미션]
                 %s
 
@@ -56,6 +62,10 @@ public class AiPromptFactory {
                 - 의도가 일치하면 해당 고정 안내를 근거로 사용자가 직접 눌러야 할 버튼을 답하세요.
                 - 현재 단계 수행에 필요한 질문에만 답하고, 미션과 현재 화면 정보를 매번 기준으로 사용하세요.
                 - 안내 대상 코드는 내부 식별자이므로 코드값 자체를 사용자에게 읽지 마세요.
+                - 버튼을 말할 때는 [현재 화면 구성]에 적힌 버튼 이름을 화면에 보이는 그대로 말하세요.
+                - 고정 안내의 버튼 이름과 [현재 화면 구성]의 버튼 이름이 다르면 [현재 화면 구성]을 따르세요.
+                - 안내 대상 코드와 같은 코드의 버튼이 [현재 화면 구성]에 있으면 그 버튼 이름으로 안내하세요.
+                - [현재 화면 구성]에 없는 버튼은 안내하지 마세요.
                 - 제공되지 않은 버튼 위치, 화면 구성, 기능은 추측하지 마세요.
                 - 사용자가 행동을 했다고 말해도 실제 화면 상태가 제공되지 않으면 완료됐다고 확정하지 마세요.
                 - 질문이 불명확하거나 의도를 판단할 수 없으면 조금 더 정확히 말해 달라고 요청하세요.
@@ -70,8 +80,40 @@ public class AiPromptFactory {
                 step.getStepName(),
                 guideMessage,
                 targetCode,
+                screen,
                 missionContext,
                 rules).strip();
+    }
+
+    private String formatScreen(AiScreenInfo screenInfo) {
+        if (screenInfo == null || screenInfo.screen() == null) {
+            return "현재 화면의 구성 정보가 등록되지 않았습니다. 단계 안내만 사용하고 버튼 이름과 위치를 추측하지 마세요.";
+        }
+        StringBuilder builder = new StringBuilder()
+                .append("- 화면 이름: ").append(screenInfo.screen().getScreenName()).append('\n')
+                .append("- 화면 설명: ").append(screenInfo.screen().getDescription()).append('\n');
+        if (screenInfo.buttons().isEmpty()) {
+            builder.append("- 이 화면에 등록된 버튼이 없습니다.");
+            return builder.toString().strip();
+        }
+        builder.append("- 화면에 있는 버튼 (화면에 보이는 이름 [내부 코드]: 설명):").append('\n');
+        appendButtons(builder, screenInfo.buttons());
+        if (!screenInfo.commonButtons().isEmpty()) {
+            builder.append("- 대부분의 화면에 공통으로 있는 버튼 (화면 설명에 없다고 적혀 있으면 그 화면에는 없음):")
+                    .append('\n');
+            appendButtons(builder, screenInfo.commonButtons());
+        }
+        return builder.toString().strip();
+    }
+
+    private void appendButtons(StringBuilder builder, List<AiScreenButton> buttons) {
+        for (AiScreenButton button : buttons) {
+            builder.append("  - ").append(button.getLabel());
+            if (button.getButtonCode() != null && !button.getButtonCode().isBlank()) {
+                builder.append(" [").append(button.getButtonCode()).append(']');
+            }
+            builder.append(": ").append(button.getDescription()).append('\n');
+        }
     }
 
     private String formatRules(List<AiGuideRule> guideRules) {
