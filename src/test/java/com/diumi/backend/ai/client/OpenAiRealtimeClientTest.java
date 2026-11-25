@@ -47,6 +47,14 @@ class OpenAiRealtimeClientTest {
                                   "model":"gpt-transcribe",
                                   "language":"ko",
                                   "prompt":"한국어 키오스크 이용 질문을 정확히 전사하세요."
+                                },
+                                "turn_detection":{
+                                  "type":"server_vad",
+                                  "threshold":0.5,
+                                  "prefix_padding_ms":300,
+                                  "silence_duration_ms":2000,
+                                  "create_response":true,
+                                  "interrupt_response":true
                                 }
                               }
                             }
