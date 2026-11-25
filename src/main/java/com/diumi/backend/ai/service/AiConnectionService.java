@@ -12,6 +12,8 @@ import com.diumi.backend.ai.guide.entity.AiGuideRule;
 import com.diumi.backend.ai.guide.repository.AiGuideRuleRepository;
 import com.diumi.backend.ai.prompt.AiMissionContextFactory;
 import com.diumi.backend.ai.prompt.AiPromptFactory;
+import com.diumi.backend.ai.screen.dto.AiScreenInfo;
+import com.diumi.backend.ai.screen.service.AiScreenInfoService;
 import com.diumi.backend.common.config.TimeConfig;
 import com.diumi.backend.common.exception.BusinessException;
 import com.diumi.backend.common.exception.ErrorCode;
@@ -29,6 +31,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,7 @@ public class AiConnectionService {
     private final ScenarioStepRepository stepRepository;
     private final MissionStepGuideRepository missionStepGuideRepository;
     private final AiGuideRuleRepository aiGuideRuleRepository;
+    private final AiScreenInfoService screenInfoService;
     private final UserActionRepository actionRepository;
     private final OpenAiRealtimeClient realtimeClient;
     private final AiPromptFactory promptFactory;
@@ -49,6 +53,7 @@ public class AiConnectionService {
                                ScenarioStepRepository stepRepository,
                                MissionStepGuideRepository missionStepGuideRepository,
                                AiGuideRuleRepository aiGuideRuleRepository,
+                               AiScreenInfoService screenInfoService,
                                UserActionRepository actionRepository,
                                OpenAiRealtimeClient realtimeClient,
                                AiPromptFactory promptFactory,
@@ -58,6 +63,7 @@ public class AiConnectionService {
         this.stepRepository = stepRepository;
         this.missionStepGuideRepository = missionStepGuideRepository;
         this.aiGuideRuleRepository = aiGuideRuleRepository;
+        this.screenInfoService = screenInfoService;
         this.actionRepository = actionRepository;
         this.realtimeClient = realtimeClient;
         this.promptFactory = promptFactory;
@@ -85,9 +91,12 @@ public class AiConnectionService {
             List<AiGuideRule> guideRules = aiGuideRuleRepository
                     .findByScenarioTypeAndScreenCodeInAndActiveTrueOrderByPriorityAscIdAsc(
                             session.getScenarioType(), List.of("COMMON", screenCode));
-            validateRequestedScreenCode(request, screenCode, guideRules);
+            Optional<AiScreenInfo> screenInfo = screenInfoService.find(
+                    session.getScenarioType(), screenCode);
+            validateRequestedScreenCode(request, screenCode, guideRules, screenInfo.isPresent());
             secret = realtimeClient.createClientSecret(visitor.getId().toString(),
-                    promptFactory.create(session, step, screenCode, missionGuide,
+                    promptFactory.create(session, step, screenCode, screenInfo.orElse(null),
+                            missionGuide,
                             missionContextFactory.create(session, step), guideRules));
         } catch (OpenAiRealtimeClientException exception) {
             throw new BusinessException(ErrorCode.AI_CONNECTION_FAILED);
@@ -125,12 +134,14 @@ public class AiConnectionService {
         return request.screenCode() == null ? step.getStepCode() : request.screenCode();
     }
 
+    /** 프론트가 보낸 화면 코드는 안내 규칙이나 화면 정보 중 하나라도 등록돼 있어야 한다. */
     private void validateRequestedScreenCode(StartAiConnectionRequest request, String screenCode,
-                                             List<AiGuideRule> guideRules) {
+                                             List<AiGuideRule> guideRules,
+                                             boolean screenInfoRegistered) {
         if (request.screenCode() == null) {
             return;
         }
-        boolean registered = guideRules.stream()
+        boolean registered = screenInfoRegistered || guideRules.stream()
                 .anyMatch(rule -> screenCode.equals(rule.getScreenCode()));
         if (!registered) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
